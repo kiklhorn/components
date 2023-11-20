@@ -24,6 +24,14 @@ void GT911::setup(){
   this->store_.pin = this->interrupt_pin_->to_isr();
   this->interrupt_pin_->attach_interrupt(GT911TouchscreenStore::gpio_intr, &this->store_,
                                           gpio::INTERRUPT_FALLING_EDGE);
+
+  // Update display dimensions if they were updated during display setup
+  this->display_width_ = this->display_->get_width();
+  this->display_height_ = this->display_->get_height();
+  this->rotation_ = static_cast<TouchRotation>(this->display_->get_rotation());
+
+  // Trigger initial read to activate the interrupt
+  this->store_.touch = true;                                          
 }
 
 void GT911::loop(){
@@ -60,27 +68,28 @@ void GT911::loop(){
         uint16_t dimension_one = (buf[3] << 8) | buf[2];
         uint16_t dimension_two = (buf[1] << 8) | buf[0];
 
-        switch (this->rotation_){
+        switch (this->rotation_){  //rotation already done somewhere else
           case ROTATE_0_DEGREES:
-            tp.x = dimension_one;
-            tp.y = this->display_height_ - dimension_two;
-            break;
-          case ROTATE_180_DEGREES:
-            tp.x = this->display_width_ - dimension_one;
-            tp.y = dimension_two;
-            break;
-          case ROTATE_270_DEGREES:
             tp.x = dimension_two;
             tp.y = dimension_one;
             break;
           case ROTATE_90_DEGREES:
-            tp.x = this->display_height_ - dimension_two;
-            tp.y = this->display_width_ - dimension_one;
+            tp.x = dimension_one;
+            tp.y = this->display_height_ - dimension_two;
+            break;
+          case ROTATE_180_DEGREES:
+            tp.x = this->display_width_ - dimension_two;
+            tp.y = this->display_height_ - dimension_one;
+            break;
+          case ROTATE_270_DEGREES:
+            tp.x = this->display_width_ - dimension_one;
+            tp.y = dimension_two;
             break;
           default:
             break;
         }
-        ESP_LOGE(TAG, "TOUCH %i, X: %i Y:%i ONE %i, TWO %i, ROT: %i", i, tp.x, tp.y, dimension_one, dimension_two, this->rotation_);
+
+        ESP_LOGD(TAG, "TOUCH %i, X: %i Y:%i ONE %i, TWO %i, ROT: %i, DW: %i, DH: %i", i, tp.x, tp.y, dimension_one, dimension_two, this->rotation_, this->display_width_, this->display_height_);
 
         this->defer([this, tp]() { this->send_touch_(tp); });
 
