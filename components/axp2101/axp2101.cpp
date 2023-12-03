@@ -69,6 +69,7 @@ void AXP2101Component::setup() {
   //! TFT BACKLIGHT VDD , Don't change
   PMU.setALDO2Voltage(3300);
   PMU.enableALDO2();
+  ESP_LOGD(TAG, "Backlight ALDO2 enabled");
 
   //! Screen touch VDD , Don't change
   PMU.setALDO3Voltage(3300);
